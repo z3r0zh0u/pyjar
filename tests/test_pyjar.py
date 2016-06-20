@@ -16,11 +16,13 @@ if __name__ == '__main__':
         java_class = pyjar.JavaClass('non_exist.class', debug = True)
     except Exception as e:
         print e
+    print '-' * 40
 
     try:
         java_class = pyjar.JavaClass('non_class.class', debug = True)
     except Exception as e:
         print e
+    print '-' * 40
     
     java_class = pyjar.JavaClass('HelloWorld.class', debug = True)
 

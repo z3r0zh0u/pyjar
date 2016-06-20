@@ -240,7 +240,7 @@ class JavaClass:
         """init JavaClass class"""
 
         logname = os.path.basename(filename)
-        logfile = 'debug.txt'
+        logfile = 'pyjar_debug.txt'
         init_logging(logname, logfile, debug)
 
         log_debug('File: ' + filename)
