@@ -1,5 +1,7 @@
 """
 Java Class File Analyzer
+Reference:
+https://docs.oracle.com/javase/specs/jvms/se7/html/jvms-4.html
 """
 
 import os
@@ -142,21 +144,94 @@ class AttributeInfo:
     def __init__(self, data):
         """init AttributeInfo class"""
 
-        self.attribute_name_index = None
+        self.name_index = None
         self.attribute_length = None
-        self.attribute_info = None
+        self.info = None
         self.length = 0
         
-        self.attribute_name_index = struct.unpack('>H', data[0x00:0x02])[0]
-        log_debug('Attribute::NameIndex: ' + hex(self.attribute_name_index))
+        self.name_index = struct.unpack('>H', data[0x00:0x02])[0]
+        log_debug('Attribute::NameIndex: ' + hex(self.name_index))
 
         self.attribute_length = struct.unpack('>I', data[0x02:0x06])[0]
         log_debug('Attribute::Length: ' + hex(self.attribute_length))
 
-        self.attribute_info = data[0x06:0x06+self.attribute_length]
-        log_debug('Attribute::Info: ' + self.attribute_info.encode('hex'))
+        self.info = data[0x06:0x06+self.attribute_length]
+        log_debug('Attribute::Info: ' + self.info.encode('hex'))
         
         self.length = 0x06+self.attribute_length
+        
+
+class CodeAttribute:
+
+    def __init__(self, data):
+        """init CodeAttribute class"""
+
+        self.max_stack = None
+        self.max_locals = None
+        self.code_length = None
+        self.code = None
+        self.exception_table_length = None
+        self.exception_tables = list()
+        self.attributes_count = None
+        self.attributes = list()
+
+        pointer = 0
+        
+        self.max_stack = struct.unpack('>H', data[0x00:0x02])[0]
+        log_debug('CodeAttribute::MaxStack: ' + hex(self.max_stack))
+
+        self.max_locals = struct.unpack('>H', data[0x02:0x04])[0]
+        log_debug('CodeAttribute::MaxLocals: ' + hex(self.max_locals))
+
+        self.code_length = struct.unpack('>I', data[0x04:0x08])[0]
+        log_debug('CodeAttribute::CodeLength: ' + hex(self.code_length))
+
+        self.code = data[0x08:0x08+self.code_length]
+        log_debug('CodeAttribute::Code: ' + self.code.encode('hex'))
+        pointer = 0x08+self.code_length
+
+        self.exception_table_length = struct.unpack('>H', data[pointer:pointer+0x02])[0]
+        log_debug('CodeAttribute::ExceptionTableLength: ' + hex(self.exception_table_length))
+        pointer += 2
+
+        for i in range(0, self.exception_table_length):
+            log_debug('######## ExceptionTable ' + hex(i+1) + ' ########')
+
+            exception_table = dict()
+            start_pc = struct.unpack('>H', data[pointer:pointer+0x02])[0]
+            log_debug('ExceptionTable::StartPC: ' + hex(self.start_pc))
+            pointer += 2
+
+            end_pc = struct.unpack('>H', data[pointer:pointer+0x02])[0]
+            log_debug('ExceptionTable::EndPC: ' + hex(self.end_pc))
+            pointer += 2
+
+            handler_pc = struct.unpack('>H', data[pointer:pointer+0x02])[0]
+            log_debug('ExceptionTable::HandlerPC: ' + hex(self.handler_pc))
+            pointer += 2
+
+            catch_type = struct.unpack('>H', data[pointer:pointer+0x02])[0]
+            log_debug('ExceptionTable::CatchType: ' + hex(self.catch_type))
+            pointer += 2
+
+            exception_table['start_pc'] = start_pc
+            exception_table['end_pc'] = end_pc
+            exception_table['handler_pc'] = handler_pc
+            exception_table['catch_type'] = catch_type
+
+            self.exception_tables.append(exception_table)
+
+        self.attributes_count = struct.unpack('>H', data[pointer:pointer+0x02])[0]
+        log_debug('CodeAttribute::AttributesCount: ' + hex(self.attributes_count))
+        pointer += 2
+        
+        for i in range(0, self.attributes_count):
+            log_debug('######## CodeAttribute::Attribute ' + hex(i+1) + ' ########')
+            attribute = AttributeInfo(data[pointer:])
+            pointer += attribute.length
+            self.attributes.append(attribute)
+
+        self.length = pointer
 
 
 class JavaClass:
@@ -191,6 +266,7 @@ class JavaClass:
         self.methods = list()
         self.attributes_count = None
         self.attributes = list()
+        self.code_attributes = list()
         
         pointer = 0
 
@@ -351,11 +427,9 @@ class JavaClass:
         pointer += 2
         
         for i in range(0, self.interfaces_count):
-
             interface = struct.unpack('>H', self.data[pointer:pointer+0x02])[0]
             log_debug('JavaClass::Interface' + str(i+1) + ': ' + hex(self.interface))
             pointer += 2
-
             self.interfaces.append(interface)
 
         self.fields_count = struct.unpack('>H', self.data[pointer:pointer+0x02])[0]
@@ -392,4 +466,17 @@ class JavaClass:
             log_debug('File End: ' + hex(pointer))
         elif pointer < len(data):
             log_debug('Overlay Data: ' + hex(len(data) - pointer))
+
+        index = 0
+        for i in range(0, self.methods_count):
+            method_info = self.methods[i]
+            for j in range(0, method_info.attributes_count):
+                attribute_info = method_info.attributes[j]
+                constant = self.constant_pool[attribute_info.name_index-1]
+                if constant['tag'] == 1 and \
+                   constant['info']['data'] == 'Code':
+                    log_debug('######## Code ' + hex(index+1) + ' ########')
+                    code_attribute = CodeAttribute(attribute_info.info)
+                    self.code_attributes.append(code_attribute)
+                    index += 1
         
