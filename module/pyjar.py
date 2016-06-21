@@ -4,7 +4,9 @@ Jar File Analyzer
 
 import os
 import sys
+import pyjc
 import struct
+import zipfile
 import logging
 
 
@@ -79,6 +81,41 @@ class JarFile:
         if os.path.isfile(filename) == False:
             raise Exception('File Not Exist: ' + filename)
 
-        self.data = open(filename, 'rb').read()
+        self.files = list()
+        self.class_files = list()
+        self.non_class_files = list()
+        self.entry_point = None
 
+        self.filename = filename
+        self.files = self.__jar_decompress()
         
+        for fileitem in self.files:
+            if fileitem['name'].endswith('.class') == True:
+                tmpfile = '_' + fileitem['name']
+                open(tmpfile, 'wb').write(fileitem['data'])
+                fileitem['class'] = pyjc.JavaClass(tmpfile, debug=debug, logfile=logfile)
+                os.remove(tmpfile)
+                self.class_files.append(fileitem)
+            elif fileitem['name'] == 'MANIFEST.MF':
+                manifest = fileitem['data'].split('\r\n')
+                for item in manifest:
+                    if item.startswith('Main-Class') == True:
+                        self.entry_point = item.strip().split(':')[-1].strip()
+            else:
+                self.non_class_files.append(fileitem)
+        
+
+    def __jar_decompress(self):
+        """decompress files in the jar archive"""
+
+        filelist = list()
+        with zipfile.ZipFile(self.filename) as zf:
+            for name in zf.namelist():
+                log_debug('Decompress File: ' + os.path.basename(name))
+                fileitem = dict()
+                fileitem['name'] = os.path.basename(name)
+                fileitem['path'] = name
+                fileitem['data'] = zf.read(name)
+                filelist.append(fileitem)
+
+        return filelist
