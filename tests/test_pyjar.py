@@ -11,4 +11,6 @@ import module.pyjar as pyjar
 
 if __name__ == '__main__':
 
-    testjar = pyjar.JarFile('HelloWorld.jar', True)
+    logfile = 'debug.txt'
+
+    testjar = pyjar.JarFile('HelloWorld.jar', debug=True, logfile=logfile)

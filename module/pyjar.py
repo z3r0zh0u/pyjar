@@ -23,10 +23,11 @@ def init_logging(logname, logfile, debug):
     if debug:
         Logger.setLevel(logging.DEBUG)
         ch.setLevel(logging.DEBUG)
-        fh = logging.FileHandler(logfile)
-        fh.setLevel(logging.DEBUG)
-        fh.setFormatter(formatter)
-        Logger.addHandler(fh)
+        if logfile:
+            fh = logging.FileHandler(logfile)
+            fh.setLevel(logging.DEBUG)
+            fh.setFormatter(formatter)
+            Logger.addHandler(fh)
     else:
         Logger.setLevel(logging.WARN)
         ch.setLevel(logging.WARN)         
@@ -53,7 +54,7 @@ def log_warn(message):
     global Logger
 
     if Logger is not None:
-        Logger.debug(message)
+        Logger.warn(message)
 
 
 def log_error(message):
@@ -62,17 +63,17 @@ def log_error(message):
     global Logger
 
     if Logger is not None:
-        Logger.debug(message)
+        Logger.error(message)
 
 
 class JarFile:
 
-    def __init__(self, filename, debug=False, logfile='pyjar_debug.txt'):
+    def __init__(self, filename, debug=False, logfile=None):
         """init JarFile class"""
 
         logname = os.path.basename(filename)
         init_logging(logname, logfile, debug)
-
+        
         log_debug('File: ' + filename)
         
         if os.path.isfile(filename) == False:

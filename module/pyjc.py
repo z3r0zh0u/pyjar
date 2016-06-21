@@ -25,10 +25,11 @@ def init_logging(logname, logfile, debug):
     if debug:
         Logger.setLevel(logging.DEBUG)
         ch.setLevel(logging.DEBUG)
-        fh = logging.FileHandler(logfile)
-        fh.setLevel(logging.DEBUG)
-        fh.setFormatter(formatter)
-        Logger.addHandler(fh)
+        if logfile:
+            fh = logging.FileHandler(logfile)
+            fh.setLevel(logging.DEBUG)
+            fh.setFormatter(formatter)
+            Logger.addHandler(fh)
     else:
         Logger.setLevel(logging.WARN)
         ch.setLevel(logging.WARN)         
@@ -55,7 +56,7 @@ def log_warn(message):
     global Logger
 
     if Logger is not None:
-        Logger.debug(message)
+        Logger.warn(message)
 
 
 def log_error(message):
@@ -64,7 +65,7 @@ def log_error(message):
     global Logger
 
     if Logger is not None:
-        Logger.debug(message)
+        Logger.error(message)
 
 
 class FieldInfo:
@@ -236,7 +237,7 @@ class CodeAttribute:
 
 class JavaClass:
 
-    def __init__(self, filename, debug=False, logfile='pyjc_debug.txt'):
+    def __init__(self, filename, debug=False, logfile=None):
         """init JavaClass class"""
 
         logname = os.path.basename(filename)
@@ -245,6 +246,7 @@ class JavaClass:
         log_debug('File: ' + filename)
         
         if os.path.isfile(filename) == False:
+            log_error('File Not Exist: ' + filename)
             raise Exception('File Not Exist: ' + filename)
 
         self.data = open(filename, 'rb').read()
@@ -272,7 +274,8 @@ class JavaClass:
         self.magic = self.data[0x00:0x04]
         log_debug('JavaClass::Magic: ' + self.magic.encode('hex'))
         if self.magic != '\xca\xfe\xba\xbe':
-            raise Exception('Invalid Java Class File')
+            log_error('Invalid Magic')
+            raise Exception('Invalid Magic')
 
         self.minor_version = struct.unpack('>H', self.data[0x04:0x06])[0]
         log_debug('JavaClass::MinorVersion: ' + hex(self.minor_version))
@@ -404,6 +407,7 @@ class JavaClass:
                 log_debug('InvokeDynamicInfo::NameTypeIndex: ' + hex(name_type_index))
                 pointer += 2
             else:
+                log_error('Invalid Constanst Type')
                 raise Exception('Invalid Constanst Type')
 
             constant['info'] = info
