@@ -236,11 +236,10 @@ class CodeAttribute:
 
 class JavaClass:
 
-    def __init__(self, filename, debug=False):
+    def __init__(self, filename, debug=False, logfile='pyjc_debug.txt'):
         """init JavaClass class"""
 
         logname = os.path.basename(filename)
-        logfile = 'pyjar_debug.txt'
         init_logging(logname, logfile, debug)
 
         log_debug('File: ' + filename)
